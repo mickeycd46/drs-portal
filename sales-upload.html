@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>นำเข้าข้อมูลยอดขาย — DRS Portal</title>
+<style>
+  :root{ --red:#e60000; --bg:#f4f5f7; --card:#fff; --text:#1a1a1a; --sec:#666; --border:#e2e4e8;
+         --green:#0f7a4d; --amber:#a36a00; --danger:#b3261e; }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text);
+       font-family:"Better Together","Noto Sans Thai",-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:640px; margin:0 auto; padding:20px 16px 60px;}
+  header{background:var(--red); color:#fff; padding:14px 16px; border-radius:0 0 14px 14px;}
+  header h1{font-size:17px; margin:0;}
+  header p{font-size:12px; margin:2px 0 0; opacity:.9;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; margin-top:16px;}
+  .card h2{font-size:15px; margin:0 0 12px;}
+  label{font-size:13px; color:var(--sec); display:block; margin:10px 0 4px;}
+  input[type=text],input[type=tel]{width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:8px; font-size:16px;}
+  .btn{display:block; width:100%; padding:12px; margin-top:14px; background:var(--red); color:#fff; border:0;
+       border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit;}
+  .btn:disabled{background:#ccc; cursor:default;}
+  .btn.secondary{background:#fff; color:var(--red); border:1.5px solid var(--red);}
+  .drop{border:2px dashed var(--border); border-radius:12px; padding:28px 16px; text-align:center; color:var(--sec);
+        font-size:14px; cursor:pointer; transition:background .15s;}
+  .drop.over{background:#fdeaea; border-color:var(--red); color:var(--red);}
+  .fileinfo{font-size:13px; margin-top:10px; padding:10px 12px; background:#f7f8fa; border-radius:8px; display:none;}
+  .bar{height:10px; background:#eceef1; border-radius:5px; overflow:hidden; margin-top:12px; display:none;}
+  .bar>div{height:100%; width:0%; background:var(--red); transition:width .2s;}
+  .status{font-size:13px; margin-top:8px; color:var(--sec); min-height:18px;}
+  .msg{border-radius:8px; padding:10px 12px; font-size:13px; margin-top:12px; display:none;}
+  .msg.ok{background:#e7f5ee; color:var(--green); display:block;}
+  .msg.warn{background:#fdf3e1; color:var(--amber); display:block;}
+  .msg.err{background:#fdecea; color:var(--danger); display:block;}
+  table{width:100%; border-collapse:collapse; font-size:12px; margin-top:8px;}
+  th{color:var(--sec); font-weight:500; text-align:left; padding:6px 4px; border-bottom:1px solid var(--border);}
+  td{padding:6px 4px; border-bottom:1px solid var(--border); vertical-align:top;}
+  .pill{display:inline-block; padding:1px 8px; border-radius:99px; font-size:11px; font-weight:600;}
+  .pill.ok{background:#e7f5ee; color:var(--green);} .pill.fail{background:#fdecea; color:var(--danger);}
+  .hidden{display:none;}
+  .sum{font-size:14px; line-height:1.7;}
+  .sum b{font-size:18px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>นำเข้าข้อมูลยอดขาย (TOL)</h1>
+  <p>ทับข้อมูลทั้งเดือนด้วยไฟล์ล่าสุด · รองรับ TOL_YYYYMM.txt และ _CONFIRM</p>
+</header>
+<div class="wrap">
+
+  <!-- STEP 1: LOGIN -->
+  <div class="card" id="loginCard">
+    <h2>เข้าสู่ระบบ (เฉพาะแอดมิน)</h2>
+    <label>Sale Code</label>
+    <input type="tel" id="saleCode" inputmode="numeric" placeholder="เช่น 39xxxxxx"
+           oninput="this.value=this.value.replace(/\D/g,'')">
+    <label>รหัส 6 หลักจากแอป Authenticator</label>
+    <input type="tel" id="totp" inputmode="numeric" maxlength="6" placeholder="000000"
+           oninput="this.value=this.value.replace(/\D/g,'')">
+    <button class="btn" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <div class="msg err" id="loginErr"></div>
+  </div>
+
+  <!-- STEP 2: UPLOAD -->
+  <div class="hidden" id="app">
+    <div class="card">
+      <h2>อัปโหลดไฟล์ประจำวัน <span id="who" style="font-weight:400;font-size:12px;color:var(--sec)"></span></h2>
+      <div class="drop" id="drop">
+        ลากไฟล์มาวางที่นี่ หรือแตะเพื่อเลือกไฟล์<br>
+        <span style="font-size:12px;">TOL_YYYYMM.txt / TOL_YYYYMM_CONFIRM.txt</span>
+      </div>
+      <input type="file" id="fileInput" accept=".txt" style="display:none">
+      <div class="fileinfo" id="fileInfo"></div>
+      <div class="bar" id="bar"><div id="barFill"></div></div>
+      <div class="status" id="status"></div>
+      <button class="btn" id="uploadBtn" onclick="startUpload(false)" disabled>อัปโหลดและโหลดเข้าระบบ</button>
+      <div class="msg" id="resultMsg"></div>
+      <div class="sum hidden" id="summary"></div>
+    </div>
+
+    <div class="card">
+      <h2>ประวัติการนำเข้าล่าสุด</h2>
+      <div id="histWrap" style="overflow-x:auto;"><table id="hist">
+        <tr><th>เวลา</th><th>ไฟล์</th><th>ผล</th><th>แถว</th><th>วันล่าสุด</th><th>หมายเหตุ</th></tr>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================== CONFIG ================== */
+var API_URL = 'https://script.google.com/macros/s/AKfycbyYOizV00UujPyplSU_pFAdokabCdRWCb3zalGL2-TbdZKgHvIpn5WY7pAEvusJE-OX/exec';
+/* ============================================ */
+
+var token = null, pickedFile = null;
+
+/* --- JSONP helper (แบบเดียวกับ Portal — ใช้ได้ทุก browser) --- */
+var cbSeq = 0;
+function api(params, done){
+  var cb = 'jp' + (++cbSeq) + '_' + Date.now();
+  params.callback = cb;
+  window[cb] = function(res){ delete window[cb]; s.remove(); done(res); };
+  var qs = Object.keys(params).map(function(k){ return k+'='+encodeURIComponent(params[k]); }).join('&');
+  var s = document.createElement('script');
+  s.src = API_URL + '?' + qs;
+  s.onerror = function(){ delete window[cb]; s.remove(); done({ ok:false, error:'เชื่อมต่อระบบไม่ได้' }); };
+  document.body.appendChild(s);
+}
+
+/* --- login --- */
+function doLogin(){
+  var code = document.getElementById('saleCode').value.trim();
+  var totp = document.getElementById('totp').value.trim();
+  var err = document.getElementById('loginErr');
+  err.style.display = 'none';
+  if (!code || totp.length !== 6){ err.textContent = 'กรอก Sale Code และรหัส 6 หลักให้ครบ'; err.style.display='block'; return; }
+  var btn = document.getElementById('loginBtn'); btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
+  api({ action:'login', saleCode:code, totp:totp }, function(res){
+    btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
+    if (!res.ok){ err.textContent = res.error || 'เข้าสู่ระบบไม่สำเร็จ'; err.style.display='block'; return; }
+    token = res.token;
+    document.getElementById('who').textContent = '· ' + res.name;
+    document.getElementById('loginCard').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    loadHistory();
+  });
+}
+
+/* --- file pick --- */
+var drop = document.getElementById('drop'), fi = document.getElementById('fileInput');
+drop.onclick = function(){ fi.click(); };
+fi.onchange = function(){ if (fi.files[0]) pick(fi.files[0]); };
+['dragover','dragenter'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+drop.addEventListener('drop', function(e){ if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]); });
+
+function pick(f){
+  var m = /^TOL_(20\d{4})(_CONFIRM)?\.txt$/i.exec(f.name);
+  var info = document.getElementById('fileInfo');
+  info.style.display = 'block';
+  clearResult();
+  if (!m){
+    pickedFile = null;
+    info.innerHTML = '⚠️ <b>' + f.name + '</b> — ชื่อไฟล์ไม่ตรงรูปแบบ TOL_YYYYMM.txt';
+    document.getElementById('uploadBtn').disabled = true;
+    return;
+  }
+  pickedFile = f;
+  var mb = (f.size/1024/1024).toFixed(1);
+  info.innerHTML = '📄 <b>' + f.name + '</b> · ' + mb + ' MB · เดือน ' + m[1] +
+                   (m[2] ? ' · <b style="color:var(--green)">ไฟล์ CONFIRM (final)</b>' : ' · ไฟล์รายวัน (preliminary)');
+  document.getElementById('uploadBtn').disabled = false;
+}
+
+/* --- upload flow: initUpload → PUT ตรงเข้า GCS → finalize --- */
+function startUpload(force){
+  if (!pickedFile) return;
+  var btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  clearResult();
+  setStatus('ขอสิทธิ์อัปโหลด...');
+  api({ action:'initUpload', token:token, filename:pickedFile.name, force: force?1:0 }, function(res){
+    if (res.needsForce){
+      btn.disabled = false; setStatus('');
+      if (confirm(res.error + '\n\nยืนยันเขียนทับข้อมูล final หรือไม่?')) startUpload(true);
+      return;
+    }
+    if (!res.ok){ fail(res.error); return; }
+    putToGcs(res.sessionUri, force);
+  });
+}
+
+function putToGcs(sessionUri, force){
+  var bar = document.getElementById('bar'), fill = document.getElementById('barFill');
+  bar.style.display = 'block'; fill.style.width = '0%';
+  var xhr = new XMLHttpRequest();
+  xhr.open('PUT', sessionUri, true);
+  xhr.setRequestHeader('Content-Type', 'text/plain');
+  xhr.upload.onprogress = function(e){
+    if (e.lengthComputable){
+      var pct = Math.round(e.loaded/e.total*100);
+      fill.style.width = pct + '%';
+      setStatus('กำลังอัปโหลด... ' + pct + '% (' + (e.loaded/1048576).toFixed(0) + '/' + (e.total/1048576).toFixed(0) + ' MB)');
+    }
+  };
+  xhr.onload = function(){
+    if (xhr.status >= 200 && xhr.status < 300){
+      setStatus('อัปโหลดเสร็จ · กำลังโหลดเข้า BigQuery (อาจใช้ 1–2 นาที)...');
+      api({ action:'finalize', token:token, filename:pickedFile.name, force: force?1:0 }, showResult);
+    } else fail('อัปโหลดเข้า Cloud Storage ไม่สำเร็จ (HTTP ' + xhr.status + ')');
+  };
+  xhr.onerror = function(){ fail('อัปโหลดล้มเหลว — เช็คอินเทอร์เน็ต หรือ CORS ของ bucket'); };
+  xhr.send(pickedFile);
+}
+
+function showResult(res){
+  var btn = document.getElementById('uploadBtn'); btn.disabled = false;
+  setStatus('');
+  var msg = document.getElementById('resultMsg'), sum = document.getElementById('summary');
+  if (!res.ok){ fail(res.error); return; }
+  var warn = (res.warnings && res.warnings.length);
+  msg.className = 'msg ' + (warn ? 'warn' : 'ok');
+  msg.innerHTML = warn ? '⚠️ โหลดสำเร็จ แต่มีข้อสังเกต:<br>• ' + res.warnings.join('<br>• ')
+                       : '✅ โหลดข้อมูลสำเร็จ';
+  sum.classList.remove('hidden');
+  sum.innerHTML = 'ตาราง <b>' + res.table + '</b> · สถานะเดือน: <b>' + (res.status==='confirmed'?'ยืนยันแล้ว (final)':'preliminary') + '</b><br>' +
+                  'จำนวนแถว (ACTUAL): <b>' + res.rows.toLocaleString() + '</b>' +
+                  (res.prevRows ? ' (รอบก่อน ' + res.prevRows.toLocaleString() + ')' : '') + '<br>' +
+                  'ช่วงวันที่ในไฟล์: <b>' + res.minDay + ' – ' + res.maxDay + '</b>';
+  loadHistory();
+}
+
+function loadHistory(){
+  api({ action:'history', token:token }, function(res){
+    if (!res.ok) return;
+    var t = document.getElementById('hist');
+    while (t.rows.length > 1) t.deleteRow(1);
+    (res.rows||[]).forEach(function(r){
+      // r: [เวลา,ผู้ทำ,ไฟล์,เดือน,ชนิด,ผล,แถว,วันแรก,วันล่าสุด,หมายเหตุ]
+      var tr = t.insertRow(-1);
+      tr.insertCell().textContent = r[0];
+      tr.insertCell().textContent = r[2];
+      tr.insertCell().innerHTML = '<span class="pill ' + (r[5]==='OK'?'ok':'fail') + '">' + r[5] + '</span>';
+      tr.insertCell().textContent = r[6] ? Number(r[6]).toLocaleString() : '';
+      tr.insertCell().textContent = r[8] || '';
+      tr.insertCell().textContent = r[9] || '';
+    });
+  });
+}
+
+function setStatus(s){ document.getElementById('status').textContent = s; }
+function clearResult(){
+  document.getElementById('resultMsg').className = 'msg';
+  document.getElementById('summary').classList.add('hidden');
+  document.getElementById('bar').style.display = 'none';
+  setStatus('');
+}
+function fail(e){
+  var msg = document.getElementById('resultMsg');
+  msg.className = 'msg err';
+  msg.textContent = '❌ ' + e;
+  document.getElementById('uploadBtn').disabled = false;
+  setStatus('');
+}
+</script>
+</body>
+</html>
