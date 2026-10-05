@@ -948,6 +948,11 @@ html,body{overflow-x:hidden;max-width:100%}
           </span>
         </button>
 
+        <div id="lineGoBox" style="display:none; margin-top:14px; text-align:center;">
+          <div class="sub" style="font-size:13px;">แตะปุ่มด้านล่างเพื่อเปิดแอป LINE แล้วกด "อนุญาต"</div>
+          <a id="lineGoLink" class="btn" href="#" style="text-decoration:none; background:#06C755;">เปิดแอป LINE ›</a>
+          <div class="sub" style="font-size:11.5px; margin-top:8px;">ถ้าไม่เด้งไปแอป LINE ให้เปิดหน้านี้ใน Safari หรือ Chrome แทน</div>
+        </div>
         <div class="error" id="methodError"></div>
         <button class="btn-ghost" id="btnBackLoginFromMethod">← เปลี่ยนรหัสพนักงาน</button>
 
@@ -1647,6 +1652,7 @@ function showMethodScreen(){
   $("methodTotpSub").textContent = d.hasTotp ? "กรอกรหัส 6 หลักจากแอป" : "ตั้งค่าครั้งแรก (สแกน QR)";
   $("methodLineSub").textContent = d.hasLine ? "รับรหัส OTP ทาง LINE" : "ผูกบัญชี LINE ครั้งแรก";
   $("methodError").style.display = "none";
+  $("lineGoBox").style.display = "none";
   $("btnMethodTotp").disabled = false;
   $("btnMethodLine").disabled = false;
   showScreen("screen-method");
@@ -1743,7 +1749,12 @@ $("btnMethodLine").addEventListener("click", async () => {
   try{
     const data = await fetchJsonWithRetry(`${APPS_SCRIPT_URL}?action=lineLinkStart&code=${encodeURIComponent(currentCode)}&_t=${Date.now()}`);
     if(data.ok && data.url){
-      window.location.href = data.url;   // ไป LINE Login (กดอนุญาต + เพิ่มเพื่อน OA) แล้วถูกพากลับมาพร้อม ?line=ok
+      // ห้ามเด้งด้วย JavaScript (window.location) — iOS จะไม่เปิดแอป LINE (Universal Link ทำงานเฉพาะตอนผู้ใช้ "แตะลิงก์จริง")
+      // จึงแสดงปุ่มลิงก์ให้แตะ → เปิดแอป LINE → กดอนุญาต/เพิ่มเพื่อน OA → พากลับพอร์ทัลพร้อม ?line=ok
+      $("lineGoLink").href = data.url;
+      $("lineGoBox").style.display = "";
+      $("btnMethodLine").disabled = false;
+      try{ $("lineGoBox").scrollIntoView({ behavior: "smooth", block: "center" }); }catch(e){}
       return;
     }
     if(data.reason === "use_line_otp"){   // ข้อมูลฝั่งหน้าเว็บเก่า: จริงๆ ผูกไว้แล้ว → ส่ง OTP ปกติ
