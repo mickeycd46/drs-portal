@@ -26,7 +26,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hdr h1{font-size:17px;margin:0;font-weight:700;flex:1;line-height:1.25}
 .hdr small{display:block;font-weight:300;opacity:.7;font-size:11.5px}
 .bar{height:3px;background:var(--grad)}
-body.dev .tabs{display:flex;max-width:560px;margin:12px auto 0;padding:0 14px}
+.tabs{display:flex;max-width:560px;margin:12px auto 0;padding:0 14px}
 .tab{flex:1;border:1.5px solid var(--navy);background:#fff;color:var(--navy);padding:8px 10px;font-weight:500;cursor:pointer}
 .tab:first-child{border-radius:10px 0 0 10px}
 .tab:last-child{border-radius:0 10px 10px 0;border-left:0}
@@ -171,9 +171,8 @@ details.more summary{cursor:pointer;font-weight:500;color:var(--navy);font-size:
 </div>
 
 <div id="app">
-  <div class="hdr"><h1>ขาย FWA<small>DRS Portal</small></h1><span id="syncTag" class="hint hidden" style="color:#fff;opacity:.85;margin:0"></span></div>
-  <div class="bar"></div>
   <div class="tabs" role="tablist" id="tabs"></div>
+  <div id="syncTag" class="hint hidden" style="max-width:560px;margin:6px auto 0;padding:0 14px"></div>
 
   <main>
     <div id="noId" class="bx pad hidden"><p class="sub" style="margin:0">เปิดแอปนี้จาก DRS Portal เพื่อใช้งาน</p></div>
@@ -203,8 +202,7 @@ details.more summary{cursor:pointer;font-weight:500;color:var(--navy);font-size:
 
             <details class="more">
               <summary>ไม่ได้อยู่หน้าบ้านลูกค้า?</summary>
-              <div style="margin-top:10px"><b>ก) กรอก Lat, Long จาก SGIS</b>
-                <div class="acts" style="margin-top:6px"><a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="https://sgis-new.truecorp.co.th" target="_blank" rel="noopener">เปิด SGIS</a></div>
+              <div style="margin-top:10px"><b>ก) กรอก Lat, Long เอง</b>
                 <label for="ll">Lat, Long</label>
                 <input type="text" id="ll" inputmode="decimal" placeholder="เช่น 16.4419, 102.8460" autocomplete="off">
                 <div class="err" id="llErr"></div>
@@ -383,8 +381,9 @@ async function api(path,body,ms=12000){
   const r=await fetchT(CFG.API_URL.replace(/\/+$/,'')+path,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...me(),...body})},ms);
   return r.json();
 }
-const PERMANENT = ['BAD_ID','BAD_REF','BAD_OUTCOME','BAD_FORM','BAD_PHONE','BAD_REASON','LOCKED','BAD_CIRCUIT','NOT_CLOSED'];
-const Q = {k:'fwa_q_v1',get(){return store.get(Q.k,[])},set(a){store.set(Q.k,a)}};
+const PERMANENT = ['NOT_SELLABLE','BAD_ID','BAD_REF','BAD_OUTCOME','BAD_FORM','BAD_PHONE','BAD_REASON','LOCKED','BAD_CIRCUIT','NOT_CLOSED'];
+const Q = {get k(){return 'fwa_q_v2_'+String(window.PORTAL_CODE||'')},get(){return store.get(Q.k,[])},set(a){store.set(Q.k,a)}};   // คิวและแคชแยกตาม Sale Code (เครื่องเดียวหลายคนใช้ได้)
+const mineKey = () => 'fwa_mine_v2_'+String(window.PORTAL_CODE||'');
 let flushing=false;
 async function flushQ(){
   if(flushing||!CFG.API_URL)return;flushing=true;
@@ -407,17 +406,15 @@ let wz=newWz();
 
 /* ================= MAP ================= */
 function baseLayers(){
-  const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,attribution:'© OpenStreetMap © CARTO'});
-  const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'});
-  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri World Imagery'});
   const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
-  return {carto,esri,sat,osm};
+  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri World Imagery'});
+  return {osm,sat};
 }
 function makeMap(el){
-  const b=baseLayers(),order=[b.carto,b.esri,b.sat];
-  const m=L.map(el,{center:[13.0,101.0],zoom:6,layers:[b.carto]});
-  L.control.layers({'แผนที่ (Carto)':b.carto,'แผนที่ (Esri)':b.esri,'ดาวเทียม':b.sat,'OpenStreetMap':b.osm},null,{position:'topright'}).addTo(m);
-  let idx=0,errs=0,loaded=false;                              // ชั้นพื้นฐานโหลดไม่ขึ้น → สลับไปชั้นถัดไปเอง
+  const b=baseLayers(),order=[b.osm,b.sat];
+  const m=L.map(el,{center:[13.0,101.0],zoom:6,layers:[b.osm]});
+  L.control.layers({'OpenStreetMap':b.osm,'ดาวเทียม':b.sat},null,{position:'topright'}).addTo(m);
+  let idx=0,errs=0,loaded=false;                              // แผนที่หลักโหลดไม่ขึ้น → สลับไปดาวเทียมเอง
   const watch=l=>{
     l.on('tileload',()=>{loaded=true});
     l.on('tileerror',()=>{
@@ -451,7 +448,7 @@ $('#locMe').onclick=()=>{
 
 /* ================= NAV ================= */
 function renderTabs(){
-  const t=[['new','ตรวจพื้นที่ / ขาย'],['list','รายการของฉัน']];
+  const t=[['new','ตรวจสอบพื้นที่'],['list','รายการของฉัน']];
   $('#tabs').innerHTML=t.map(([k,l])=>`<button class="tab" role="tab" data-t="${k}" aria-selected="false">${l}</button>`).join('');
   $('#tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>showView(b.dataset.t));
 }
@@ -513,7 +510,7 @@ function goLL(){
   const r=parseLL($('#ll').value);
   if(!r){$('#llErr').textContent='อ่านพิกัดไม่ได้ วางเป็น Lat, Long ในประเทศไทย เช่น 16.4419, 102.8460';return}
   $('#llErr').textContent='';
-  applyPin({lat:r.lat,lng:r.lng,source:'sgis',capturedAt:Date.now()});
+  applyPin({lat:r.lat,lng:r.lng,source:'manual',capturedAt:Date.now()});
 }
 $('#llGo').onclick=goLL;
 $('#ll').addEventListener('keydown',e=>{if(e.key==='Enter')goLL()});
@@ -804,7 +801,7 @@ function resetWizard(){
 }
 
 /* ================= LIST ================= */
-let mineItems=store.get('fwa_mine',[]);
+let mineItems=[];
 function allItems(){
   const q=Q.get(),ids=new Set(q.filter(x=>x.k==='save').map(x=>x.id));
   const out=q.filter(x=>x.k==='save').map(x=>x.view);
@@ -815,7 +812,7 @@ function allItems(){
 const titleOf = r => r.form&&r.form.name ? r.form.name : (r.followPhone?'โทรติดตาม '+r.followPhone:'Call Card (ไม่ปิดการขาย)');
 async function loadMine(){
   if(!CFG.API_URL)return;
-  try{const r=await api('/mine',{});if(r.ok){mineItems=r.items;store.set('fwa_mine',mineItems)}}catch(e){}
+  try{const r=await api('/mine',{});if(r.ok){mineItems=r.items;store.set(mineKey(),mineItems)}}catch(e){}
 }
 function renderList(){
   const fl=[['all','ทั้งหมด'],['waiting_circuit','รอ Circuit'],['completed','ครบแล้ว'],['logged','ไม่ปิดการขาย']];
@@ -896,6 +893,8 @@ function init(){
   (function ready(){                                          // Portal ฝังตัวตนให้หลังโหลด รอได้ไม่เกิน ~3 วินาที
     if(me().c&&me().t){
       if(!linkBase())$('#lkWrap').classList.add('hidden');
+      try{localStorage.removeItem('fwa_q_v1');localStorage.removeItem('fwa_mine')}catch(e){}
+      mineItems=store.get(mineKey(),[]);
       showView('new');gotoStep(1);syncTag();flushQ();
       setInterval(flushQ,30000);window.addEventListener('online',flushQ);
     }else if(++tries<12)setTimeout(ready,250);
