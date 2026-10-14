@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ขาย FWA | DRS Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --navy:#000F3C; --red:#EC2127; --blue:#2D28CD; --magenta:#B3207A; --purple:#6F60A9; --cyan:#00C8FF;
+  --ink:#0d1533; --muted:#5b6482; --line:#cdd3df; --soft:#f4f6fa; --paper:#eceff5; --card:#fff;
+  --ok:#16803c; --warn:#b45309; --bad:#c81e1e;
+  --grad:linear-gradient(90deg,#FF0000,#B3207A,#6F60A9,#2D28CD,#00C8FF);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Better Together","Noto Sans Thai",Tahoma,Arial,sans-serif;color:var(--ink);background:var(--paper);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+
+/* โครง: หัวแถบ + แท็บ + คอลัมน์เดียว (มือถือเป็นหลัก) */
+.hdr{background:var(--navy);color:#fff;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:10px}
+.hdr h1{font-size:17px;margin:0;font-weight:700;flex:1;line-height:1.25}
+.hdr small{display:block;font-weight:300;opacity:.7;font-size:11.5px}
+.bar{height:3px;background:var(--grad)}
+body.dev .tabs{display:flex;max-width:560px;margin:12px auto 0;padding:0 14px}
+.tab{flex:1;border:1.5px solid var(--navy);background:#fff;color:var(--navy);padding:8px 10px;font-weight:500;cursor:pointer}
+.tab:first-child{border-radius:10px 0 0 10px}
+.tab:last-child{border-radius:0 10px 10px 0;border-left:0}
+.tab[aria-selected=true]{background:var(--navy);color:#fff}
+main{max-width:560px;margin:0 auto;padding:12px 14px 24px}
+
+/* ความคืบหน้า: 4 ช่อง + ชื่อขั้นปัจจุบัน */
+.prog{margin:0 0 12px}
+.seg{display:flex;gap:4px}
+.st{flex:1;height:6px;border-radius:99px;background:#d3d8e3;border:0;padding:0;cursor:default;position:relative}
+.st.on{background:var(--red)}
+.st.done{background:var(--navy);cursor:pointer}
+.st::before{content:"";position:absolute;inset:-10px 0}
+.stl{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;font-size:13px;color:var(--muted)}
+.stl b{font-size:17px;color:var(--ink)}
+
+/* กรอบ: หน่วยพื้นฐานของทุกหน้า (หัวกรอบ + เนื้อใน) */
+.bx{background:var(--card);border:1.5px solid var(--line);border-radius:12px;margin-top:12px;overflow:hidden}
+.pg>.bx:first-child,.pg>.sumbar:first-child{margin-top:0}
+.bx>h3{margin:0;padding:8px 12px;background:var(--soft);border-bottom:1.5px solid var(--line);font-size:13.5px;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bx>h3 .n{font-weight:400;color:var(--muted);font-size:12.5px}
+.bx>.in{padding:4px 12px 12px}
+.bx.pad{padding:14px}
+.bx p.sub{margin:0;color:var(--muted);font-size:13.5px}
+.sumbar{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px;color:var(--muted);margin-top:12px}
+.sumbar b{color:var(--ink)}
+.note{border:1.5px solid #e4c06a;background:#fff6e6;border-radius:12px;padding:9px 12px;font-size:13px;margin-top:12px}
+
+/* ฟอร์ม */
+label{display:block;font-weight:500;font-size:13.5px;margin:10px 0 4px}
+input[type=text],input[type=tel],input[type=date],input[type=number],textarea,select.f{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;background:#fff;font-size:16px}
+input[type=file]{width:100%;font-size:14px}
+textarea{min-height:72px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+.hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+.err{color:var(--bad);font-size:13px;margin-top:4px}
+.consent{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:14px;margin:10px 0 0}
+.consent input{margin-top:3px;width:20px;height:20px;flex:none}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-top:8px;cursor:pointer;font-weight:400}
+.opt:first-of-type{margin-top:10px}
+.opt input{margin-top:4px;width:18px;height:18px;flex:none}
+.opt b{display:block;font-size:15px}
+.opt span{font-size:13px;color:var(--muted)}
+.opt:has(input:checked){border-color:var(--navy);background:#f1f4ff}
+.opt.dis{opacity:.5;cursor:not-allowed}
+
+/* ปุ่ม */
+.btn{border:0;border-radius:10px;padding:10px 16px;min-height:44px;font-weight:700;cursor:pointer;background:var(--navy);color:#fff}
+.btn.red{background:var(--red)}
+.btn.ok{background:var(--ok)}
+.btn.warn{background:var(--warn)}
+.btn.bad{background:var(--bad)}
+.btn.ghost{background:#fff;color:var(--navy);border:1.5px solid var(--navy)}
+.btn.wide{width:100%;margin-top:10px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.pill{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:2px 11px;font-size:12.5px;cursor:pointer;color:var(--navy)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.acts.dock{position:sticky;bottom:0;z-index:600;flex-wrap:nowrap;margin:14px -14px -24px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.97);border-top:1.5px solid var(--line)}
+.dock .btn{flex:1}
+.dock .btn.ghost{flex:0 0 auto}
+
+/* แผนที่ */
+.mapwrap{position:relative}
+.map{height:340px;z-index:0}
+.map.big{height:clamp(320px,52vh,520px)}
+.loc{position:absolute;top:10px;left:50px;z-index:500;padding:4px 12px;min-height:0;font-size:13px;box-shadow:0 1px 6px rgba(0,0,0,.25)}
+.legend{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12.5px;padding:8px 12px;border-top:1.5px solid var(--line)}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px;border:1px solid rgba(0,0,0,.25)}
+.pin{width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--red);border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5)}
+
+/* ผลลัพธ์ (แถบสีด้านซ้ายบอกผล) */
+.res{border-radius:12px;padding:11px 14px;margin-top:12px;border:1.5px solid;border-left-width:6px}
+.res.good{background:#ecf8f0;border-color:var(--ok)}
+.res.bad{background:#fdeeee;border-color:var(--bad)}
+.res.mid{background:#fff6e6;border-color:#c58a1b}
+.res .big{font-size:18px;font-weight:700;line-height:1.35}
+.chip{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12.5px;font-weight:700}
+.c-draft{background:#e6e6ee;color:#444}.c-pending{background:#fff1cc;color:#8a5a00}.c-revise{background:#e8e3ff;color:#4a3bb0}
+.c-approved,.c-submitted{background:#d8f3e2;color:#14653a}.c-rejected{background:#fde0e0;color:#a11}.c-cancelled{background:#eee;color:#666}.c-logged{background:#dff3fb;color:#07587a}
+.circ{border:1.5px solid #e4c06a;background:#fff6e6;border-radius:12px;padding:10px 12px;margin-top:12px}
+
+/* Speedtest */
+.spbox{padding:6px 0 0}
+.spmain{font-size:46px;font-weight:700;line-height:1.1;color:var(--navy)}
+.spmain small{font-size:14px;font-weight:400;color:var(--muted)}
+.sptrack{height:6px;background:#e3e6ee;border-radius:99px;overflow:hidden;margin:10px 0 6px}
+.sptrack i{display:block;height:100%;width:0;background:var(--grad);transition:width .25s linear}
+.sphase{font-size:13px;color:var(--muted);min-height:20px}
+.sptiles{margin-top:10px;text-align:center;display:grid!important;grid-template-columns:repeat(3,1fr);gap:0;border:1.5px solid var(--line);border-radius:10px}
+.sptiles>div{padding:8px 4px}
+.sptiles>div+div{border-left:1.5px solid var(--line)}
+.sptiles b{display:block;font-size:20px}
+.sptiles small{font-size:11.5px;color:var(--muted)}
+
+/* รายการ + รายละเอียด */
+.lst{display:grid;gap:10px}
+.it{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;cursor:pointer;text-align:left;width:100%}
+.it:hover{border-color:var(--navy)}
+.it .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.it .s{color:var(--muted);font-size:13px;margin-top:2px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.fl{border:1.5px solid var(--line);background:#fff;border-radius:99px;padding:5px 12px;cursor:pointer;font-size:13px}
+.fl[aria-pressed=true]{background:var(--navy);color:#fff;border-color:var(--navy)}
+dialog{border:0;border-radius:16px;padding:0;width:min(560px,96vw);max-height:92vh}
+dialog::backdrop{background:rgba(0,15,60,.55)}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1.5px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
+.db{padding:14px 14px 18px;overflow:auto;max-height:calc(92vh - 60px)}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;word-break:break-word}
+.ph{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ph figure{margin:0}.ph img{width:100%;border-radius:10px;border:1.5px solid var(--line);max-height:220px;object-fit:cover}
+.ph .blur img{filter:blur(14px)}
+.hist{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin:0;list-style:none}
+.hist li{margin:4px 0}
+pre.mail{background:#f3f1ee;border-radius:10px;padding:12px;white-space:pre-wrap;font-family:inherit;font-size:13px;margin:6px 0 0}
+.cust{max-width:460px;margin:0 auto;padding:20px 14px}
+details.more{margin-top:12px;border-top:1.5px dashed var(--line);padding-top:10px}
+details.more summary{cursor:pointer;font-weight:500;color:var(--navy);font-size:14px}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9999;max-width:92vw}
+#toast.show{opacity:1}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- หน้าลูกค้า (เปิดจากลิงก์ ?pin=TOKEN) -->
+<div id="customer" class="hidden">
+  <div class="hdr"><h1>ยืนยันตำแหน่งบ้านที่ติดตั้ง<small>ทรู FWA</small></h1></div><div class="bar"></div>
+  <div class="cust">
+    <div class="bx pad">
+      <h2 style="margin:0 0 4px;font-size:17px">กดยืนยันตำแหน่งขณะอยู่ที่บ้านที่จะติดตั้ง</h2>
+      <p class="sub">ทรูใช้ตำแหน่งนี้ตรวจพื้นที่และนัดช่างเท่านั้น</p>
+      <button class="btn red wide" id="cGet">ใช้ตำแหน่งปัจจุบันของฉัน</button>
+      <div id="cInfo" class="hint"></div>
+      <button class="btn wide" id="cSend" disabled>ส่งตำแหน่งให้พนักงาน</button>
+    </div>
+    <p class="hint">ถ้าเบราว์เซอร์ถามสิทธิ์ เลือก "อนุญาต" ตำแหน่ง</p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="hdr"><h1>ขาย FWA<small>DRS Portal</small></h1><span id="syncTag" class="hint hidden" style="color:#fff;opacity:.85;margin:0"></span></div>
+  <div class="bar"></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <main>
+    <div id="noId" class="bx pad hidden"><p class="sub" style="margin:0">เปิดแอปนี้จาก DRS Portal เพื่อใช้งาน</p></div>
+    <section id="viewNew">
+      <div class="prog" id="stepper"></div>
+
+      <!-- 1: แผนที่ + ปักหมุด -->
+      <div id="step1" class="pg">
+        <div class="bx">
+          <h3><span>แผนที่พื้นที่ขาย</span></h3>
+          <div class="mapwrap">
+            <div id="map1" class="map big"></div>
+            <button class="btn ghost loc" id="locMe" type="button">ไปตำแหน่งของฉัน</button>
+          </div>
+          <div class="legend">
+            <span><i class="sw" style="background:rgba(0,158,58,.85)"></i>ขายได้ (ไกลกว่า <span class="thr"></span> ม. จาก L2)</span>
+            <span><i class="sw" style="background:rgba(229,0,26,.85)"></i>ใกล้ L2 (เสนอไฟเบอร์)</span>
+          </div>
+        </div>
+
+        <div class="bx">
+          <h3><span>ปักหมุดหน้าบ้านลูกค้า</span></h3>
+          <div class="in">
+            <label class="consent"><input type="checkbox" id="atHome"> <span>ฉันอยู่หน้าบ้านลูกค้าตอนนี้</span></label>
+            <button class="btn red wide" id="gpsGo" disabled>ปักหมุดที่ตำแหน่งฉัน</button>
+            <div class="hint" id="gpsInfo"></div>
+
+            <details class="more">
+              <summary>ไม่ได้อยู่หน้าบ้านลูกค้า?</summary>
+              <div style="margin-top:10px"><b>ก) กรอก Lat, Long จาก SGIS</b>
+                <div class="acts" style="margin-top:6px"><a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="https://sgis-new.truecorp.co.th" target="_blank" rel="noopener">เปิด SGIS</a></div>
+                <label for="ll">Lat, Long</label>
+                <input type="text" id="ll" inputmode="decimal" placeholder="เช่น 16.4419, 102.8460" autocomplete="off">
+                <div class="err" id="llErr"></div>
+                <div class="acts"><button class="btn" id="llGo">ตรวจสอบพิกัด</button></div>
+              </div>
+              <div style="margin-top:16px" id="lkWrap"><b>ข) ส่งลิงก์ให้ลูกค้าปักหมุดเอง</b>
+                <div class="hint" style="margin-top:2px">ใช้ได้ 24 ชั่วโมง</div>
+                <div class="acts" style="margin-top:6px"><button class="btn" id="lkMake">สร้างลิงก์</button></div>
+                <div id="lkBox" class="hidden">
+                  <label for="lkUrl">ลิงก์สำหรับลูกค้า</label>
+                  <input type="text" id="lkUrl" readonly>
+                  <div class="acts"><button class="btn ghost" id="lkCopy">คัดลอก</button><a class="btn ghost" id="lkLine" style="text-decoration:none;display:inline-flex;align-items:center" target="_blank" rel="noopener">ส่งทาง LINE</a></div>
+                  <div class="hint" id="lkStatus"></div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div id="pinResult"></div>
+        <div class="acts dock">
+          <button class="btn red" id="toStep2" disabled>ถัดไป: วัดสัญญาณ</button>
+          <button class="btn ghost hidden" id="toLog">บันทึกผล (ไม่ขาย FWA)</button>
+        </div>
+      </div>
+
+      <!-- 2: Speedtest -->
+      <div id="step2" class="pg hidden">
+        <div class="bx">
+          <h3><span>วัดสัญญาณหน้าบ้านลูกค้า</span><span class="n">ดีเมื่อ ≥ 15 Mbps</span></h3>
+          <div class="in">
+            <div class="hint" style="margin:8px 0 0">ใช้มือถือซิมทรู ยืนใกล้จุดวางเราเตอร์ ถือนิ่งประมาณ 10 วินาที</div>
+            <div class="spbox" id="spBox" aria-live="polite">
+              <div class="spmain"><span id="spBig">–</span> <small>Mbps ดาวน์โหลด</small></div>
+              <div class="sptrack"><i id="spBar"></i></div>
+              <div class="sphase" id="spPhase">พร้อมทดสอบ</div>
+              <div class="sptiles">
+                <div><b id="tDown">–</b><small>ดาวน์โหลด Mbps</small></div>
+                <div><b id="tUp">–</b><small>อัปโหลด Mbps</small></div>
+                <div><b id="tPing">–</b><small>Ping ms</small></div>
+              </div>
+            </div>
+            <button class="btn red wide" id="spStart">เริ่มทดสอบ</button>
+            <button class="btn ghost wide hidden" id="spCancel">ยกเลิก</button>
+            <div id="spGrade" style="margin-top:8px"></div>
+            <div class="err" id="eSp"></div>
+            <details id="spManual" class="more">
+              <summary>วัดในแอปไม่ได้? กรอกผลเอง</summary>
+              <div class="row3" style="margin-top:6px">
+                <div><label for="spDown">ดาวน์โหลด</label><input type="number" id="spDown" inputmode="decimal" step="0.1" min="0" placeholder="Mbps"></div>
+                <div><label for="spUp">อัปโหลด</label><input type="number" id="spUp" inputmode="decimal" step="0.1" min="0" placeholder="Mbps"></div>
+                <div><label for="spPing">Ping</label><input type="number" id="spPing" inputmode="numeric" min="0" placeholder="ms"></div>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div class="acts dock"><button class="btn ghost" id="backTo1">กลับ</button><button class="btn red" id="toStep3">ถัดไป: ผลการเสนอขาย</button></div>
+      </div>
+
+      <!-- 3: ผลการเสนอขาย -->
+      <div id="step3" class="pg hidden">
+        <div class="sumbar" id="s3Sum"></div>
+        <div id="s3Lock" class="note hidden">อยู่ในระยะ L2 บันทึกได้เฉพาะ "อยู่ในพื้นที่ให้บริการ True Online อยู่แล้ว"</div>
+        <div class="bx">
+          <h3><span>ผลการเสนอขาย FWA</span></h3>
+          <div class="in">
+            <label class="opt" id="optClosed"><input type="radio" name="oc" value="closed"><span><b>ปิดการขายได้</b></span></label>
+            <label class="opt" id="optDeciding"><input type="radio" name="oc" value="deciding"><span><b>รอตัดสินใจ</b>เก็บเบอร์เพื่อติดตาม</span></label>
+            <label class="opt" id="optNot"><input type="radio" name="oc" value="not_closed"><span><b>ปิดไม่ได้</b></span></label>
+          </div>
+        </div>
+
+        <div id="ocDeciding" class="bx hidden">
+          <h3><span>ติดตามลูกค้า</span></h3>
+          <div class="in">
+            <div class="row">
+              <div><label for="dPhone">เบอร์ติดต่อลูกค้า</label><input type="tel" id="dPhone" inputmode="tel" maxlength="10" autocomplete="off"></div>
+              <div><label for="dDate">วันที่ควรติดตาม</label><input type="date" id="dDate"></div>
+            </div>
+            <label for="dNote">หมายเหตุ (ถ้ามี)</label><textarea id="dNote" style="min-height:56px"></textarea>
+          </div>
+        </div>
+        <div id="ocNot" class="bx hidden">
+          <h3><span>สาเหตุที่ปิดไม่ได้</span></h3>
+          <div class="in" id="nReasons"></div>
+          <div class="in hidden" id="nOtherWrap" style="padding-top:0"><label for="nNote">ระบุ</label><textarea id="nNote" style="min-height:56px"></textarea></div>
+        </div>
+        <div id="speedWarn" class="res bad hidden"><b>สัญญาณต่ำกว่า 8 Mbps (ไม่แนะนำให้ขาย)</b>
+          <label class="consent"><input type="checkbox" id="speedAck"> <span>แจ้งลูกค้าแล้ว และลูกค้ายังต้องการสมัคร</span></label></div>
+        <div class="err" id="eS3"></div>
+        <div class="acts dock"><button class="btn ghost" id="backFrom3">กลับ</button><button class="btn red" id="s3Next">บันทึก</button></div>
+      </div>
+
+      <!-- 4: ปิดการขาย -->
+      <div id="step4" class="pg hidden">
+        <div class="sumbar" id="s4Pin"></div>
+        <div class="bx">
+          <h3><span>ข้อมูลการขาย</span></h3>
+          <div class="in">
+            <label for="fName">ชื่อลูกค้า</label><input type="text" id="fName" autocomplete="off"><div class="err" id="eName"></div>
+            <label>โปรโมชัน</label>
+            <div id="fPromos"></div><div class="err" id="ePromo"></div>
+            <label for="fDate">วันนัดติดตั้ง</label><input type="date" id="fDate"><div class="err" id="eDate"></div>
+          </div>
+        </div>
+        <div class="note">หลังออกออเดอร์สำเร็จ กลับมาใส่ Circuit ที่ "รายการของฉัน"</div>
+        <div class="acts dock">
+          <button class="btn ghost" id="backTo3">กลับ</button>
+          <button class="btn red" id="submitReq">บันทึก</button>
+        </div>
+      </div>
+
+      <div id="stepDone" class="pg hidden">
+        <div class="bx pad"><h2 id="doneTitle" style="margin:0 0 4px;font-size:17px"></h2><p class="sub" id="doneTxt"></p>
+          <div class="acts"><button class="btn" id="goList">ดูรายการของฉัน</button><button class="btn ghost" id="newAgain">เริ่มเคสใหม่</button></div></div>
+      </div>
+    </section>
+
+    <section id="viewList" class="hidden">
+      <div class="filters" id="filters"></div>
+      <div class="lst" id="lst"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlg"><div class="dh"><b id="dTitle"></b><button class="btn ghost" id="dClose">ปิด</button></div><div class="db" id="dBody"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ================= CONFIG ================= */
+const CFG = {
+  API_URL: 'https://fwa-api-1024308722431.asia-southeast3.run.app',                      // URL ของ fwa-api (Cloud Run)  เช่น https://fwa-api-xxxx.a.run.app
+  SPEEDTEST_API_URL: 'https://fwa-speedtest-1024308722431.asia-southeast3.run.app',            // URL ของ speedtest (Cloud Run)
+  CUSTOMER_LINK_BASE: 'https://mickeycd46.github.io/drs-portal/fwa.html',           // URL สาธารณะของหน้านี้ (GitHub Pages) ใช้สร้างลิงก์ให้ลูกค้า
+  FWA_MIN_DISTANCE_M: 600,          // แสดงผลเท่านั้น ตัวตัดสินอยู่ที่เซิร์ฟเวอร์
+  GPS_MAX_ACCURACY_M: 50,
+  LINK_TTL_H: 24,
+  SPEED_DOWN_MS: 4000, SPEED_UP_MS: 3000, SPEED_PINGS: 8,
+  SPEED_DOWN_STREAMS: 4, SPEED_UP_STREAMS: 3,
+  SPEED_GOOD: 15, SPEED_MIN: 8      // ≥15 ดี, 8-15 พอใช้, <8 ไม่แนะนำ
+};
+const STATUS = {sending:'กำลังส่ง',logged:'บันทึกแล้ว',waiting_circuit:'รอ Circuit',completed:'ครบแล้ว'};
+const STATUS_CLS = {sending:'c-draft',logged:'c-logged',waiting_circuit:'c-pending',completed:'c-approved'};
+const REASONS = [['poor_signal','สัญญาณมือถือไม่ดี'],['in_l2','อยู่ในพื้นที่ให้บริการ True Online อยู่แล้ว'],['unattractive','ข้อเสนอไม่น่าสนใจ'],['has_mobile','ใช้มือถือเพียงพออยู่แล้ว'],['other','อื่นๆ (โปรดระบุ)']];
+const PROMOS = [['299_ais','299 · ย้ายค่ายจาก AIS'],['299_3bb','299 · ย้ายค่ายจาก 3BB'],['299_nt','299 · ย้ายค่ายจาก NT'],['399_new','399 · ติดตั้งใหม่']];
+const reasonLabel = k => k==='deciding'?'รอตัดสินใจ':(REASONS.find(r=>r[0]===k)||[,''])[1];
+const promoLabel = k => (PROMOS.find(r=>r[0]===k)||[,''])[1];
+
+/* ================= HELPERS ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDT = t => new Date(t).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'});
+const fmtD = t => t ? new Date(t+'T00:00:00').toLocaleDateString('th-TH',{dateStyle:'long'}) : '-';
+const today = () => {const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2800)}
+const fmtDist = m => m>=1000 ? (m/1000).toFixed(2)+' กม.' : Math.round(m).toLocaleString('th-TH')+' ม.';
+const fmtNear = n => !n ? '-' : n.beyond ? 'ไกลกว่า 20 กม.' : fmtDist(n.dist);
+function parseLL(t){const m=String(t).match(/-?\d+(?:\.\d+)?/g);if(!m||m.length<2)return null;const lat=+m[0],lng=+m[1];if(lat<5.5||lat>20.6||lng<97.3||lng>105.7)return null;return {lat,lng}}
+const phoneOk = s => /^0\d{8,9}$/.test(s);
+function grade(d){ if(d==null||isNaN(d))return null; return d>=CFG.SPEED_GOOD?{k:'good',t:'ดี',c:'#ecf8f0;color:#14653a'}:d>=CFG.SPEED_MIN?{k:'mid',t:'พอใช้ (ต่ำกว่าที่แนะนำ)',c:'#fff1cc;color:#8a5a00'}:{k:'bad',t:'ไม่แนะนำให้ขาย',c:'#fde0e0;color:#a11'} }
+const gradeChip = d => {const g=grade(d);return g?`<span class="chip" style="background:${g.c}">${g.t}</span>`:''};
+const newId = () => {const d=new Date(),a=new Uint8Array(5);crypto.getRandomValues(a);return 'FWA-'+String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'-'+[...a].map(x=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[x%32]).join('')};
+
+/* ================= API + คิวส่งซ้ำอัตโนมัติ ================= */
+const store = {
+  get(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch(e){return def}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+};
+const me = () => ({c:String(window.PORTAL_CODE||''),t:String(window.PORTAL_TOKEN||'')});
+function fetchT(url,opt,ms,sig){
+  const c=new AbortController(),f=()=>c.abort(),t=setTimeout(f,ms);
+  if(sig)sig.addEventListener('abort',f);
+  return fetch(url,{...opt,signal:c.signal}).finally(()=>{clearTimeout(t);if(sig)sig.removeEventListener('abort',f)});
+}
+async function api(path,body,ms=12000){
+  const r=await fetchT(CFG.API_URL.replace(/\/+$/,'')+path,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...me(),...body})},ms);
+  return r.json();
+}
+const PERMANENT = ['BAD_ID','BAD_REF','BAD_OUTCOME','BAD_FORM','BAD_PHONE','BAD_REASON','LOCKED','BAD_CIRCUIT','NOT_CLOSED'];
+const Q = {k:'fwa_q_v1',get(){return store.get(Q.k,[])},set(a){store.set(Q.k,a)}};
+let flushing=false;
+async function flushQ(){
+  if(flushing||!CFG.API_URL)return;flushing=true;
+  try{
+    for(const it of Q.get()){
+      try{
+        const r=it.k==='save'?await api('/save',{case:it.body}):await api('/circuit',it.body);
+        if(r.ok||PERMANENT.includes(r.error))Q.set(Q.get().filter(x=>x.t!==it.t));else if(r.error==='AUTH')break;
+      }catch(e){break}
+    }
+  }finally{flushing=false;syncTag()}
+}
+function syncTag(){const n=Q.get().length,t=$('#syncTag');t.classList.toggle('hidden',!n);t.textContent=n?'กำลังส่งข้อมูล…':''}
+function queue(it){it.t=Date.now()+Math.random();const a=Q.get().filter(x=>!(it.k==='save'&&x.k==='save'&&x.id===it.id));a.push(it);Q.set(a);syncTag();return flushQ()}
+
+/* ================= STATE ================= */
+let listFilter='all', map1=null, layer1=null, map2=null, linkTimer=null, pinSeq=0;
+function newWz(){return {id:null,pin:null,near:null,speed:{},outcome:null,reason:null,note:'',phone:'',follow:'',speedAck:false,locked:false,form:{}}}
+let wz=newWz();
+
+/* ================= MAP ================= */
+function baseLayers(){
+  const carto=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,attribution:'© OpenStreetMap © CARTO'});
+  const esri=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'});
+  const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri World Imagery'});
+  const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+  return {carto,esri,sat,osm};
+}
+function makeMap(el){
+  const b=baseLayers(),order=[b.carto,b.esri,b.sat];
+  const m=L.map(el,{center:[13.0,101.0],zoom:6,layers:[b.carto]});
+  L.control.layers({'แผนที่ (Carto)':b.carto,'แผนที่ (Esri)':b.esri,'ดาวเทียม':b.sat,'OpenStreetMap':b.osm},null,{position:'topright'}).addTo(m);
+  let idx=0,errs=0,loaded=false;                              // ชั้นพื้นฐานโหลดไม่ขึ้น → สลับไปชั้นถัดไปเอง
+  const watch=l=>{
+    l.on('tileload',()=>{loaded=true});
+    l.on('tileerror',()=>{
+      if(loaded||order[idx]!==l||++errs<4)return;
+      errs=0;if(idx>=order.length-1)return;
+      m.removeLayer(l);idx++;loaded=false;m.addLayer(order[idx]);
+    });
+  };
+  order.forEach(watch);
+  return m;
+}
+const pinIcon=()=>L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[18,18],iconAnchor:[9,18]});
+function drawPin(map,grp,pin){
+  grp.clearLayers();
+  L.marker([pin.lat,pin.lng],{icon:pinIcon()}).addTo(grp);
+  map.setView([pin.lat,pin.lng],Math.max(map.getZoom(),16));
+}
+/* สีพื้นที่ = รูป tile จากเซิร์ฟเวอร์ (ข้อมูลพิกัด L2 ไม่อยู่ในแอปนี้) */
+function addCoverage(map){
+  const m=me();
+  L.tileLayer(CFG.API_URL.replace(/\/+$/,'')+'/tile/{z}/{x}/{y}.png?c='+encodeURIComponent(m.c)+'&t='+encodeURIComponent(m.t),{minZoom:5,maxZoom:19,maxNativeZoom:19,zIndex:5,keepBuffer:3,updateWhenIdle:false,crossOrigin:false}).addTo(map);
+}
+function initMap1(){
+  if(map1)return;
+  map1=makeMap('map1');layer1=L.layerGroup().addTo(map1);addCoverage(map1);
+}
+$('#locMe').onclick=()=>{
+  if(!navigator.geolocation){toast('อุปกรณ์นี้ไม่รองรับ GPS');return}
+  navigator.geolocation.getCurrentPosition(p=>map1.setView([p.coords.latitude,p.coords.longitude],16),()=>toast('เปิดสิทธิ์ Location ให้เบราว์เซอร์ก่อน'),{enableHighAccuracy:true,timeout:15000});
+};
+
+/* ================= NAV ================= */
+function renderTabs(){
+  const t=[['new','ตรวจพื้นที่ / ขาย'],['list','รายการของฉัน']];
+  $('#tabs').innerHTML=t.map(([k,l])=>`<button class="tab" role="tab" data-t="${k}" aria-selected="false">${l}</button>`).join('');
+  $('#tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>showView(b.dataset.t));
+}
+function showView(v){
+  $('#viewNew').classList.toggle('hidden',v!=='new');
+  $('#viewList').classList.toggle('hidden',v!=='list');
+  $('#tabs').querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===v));
+  if(v==='list')renderList();
+  if(v==='new'){initMap1();setTimeout(()=>map1.invalidateSize(),50)}
+}
+function setStep(n){
+  const names=['ตรวจพื้นที่','วัดสัญญาณ','ผลการเสนอขาย','ปิดการขาย'];
+  $('#stepper').innerHTML=`<div class="seg">${names.map((x,i)=>{const k=i+1;return `<button class="st ${k===n?'on':(k<n?'done':'')}" data-s="${k}" aria-label="ขั้น ${k} ${x}" ${k<n?'':'tabindex="-1"'}></button>`}).join('')}</div><div class="stl"><b>${names[n-1]}</b><span>${n}/4</span></div>`;
+  $('#stepper').querySelectorAll('.st.done').forEach(b=>b.onclick=()=>gotoStep(+b.dataset.s));
+}
+function gotoStep(n){
+  ['step1','step2','step3','step4','stepDone'].forEach(id=>$('#'+id).classList.add('hidden'));
+  if(n===1){$('#step1').classList.remove('hidden');setStep(1);if(map1)setTimeout(()=>map1.invalidateSize(),50)}
+  if(n===2){$('#step2').classList.remove('hidden');setStep(2);fillSpeed()}
+  if(n===3){$('#step3').classList.remove('hidden');setStep(3);fillStep3()}
+  if(n===4){$('#step4').classList.remove('hidden');setStep(4);fillForm()}
+  if(n===5){$('#stepDone').classList.remove('hidden');$('#stepper').innerHTML=''}
+  window.scrollTo({top:0})
+}
+
+/* ================= STEP 1: PIN ================= */
+async function checkDistance(lat,lng){
+  let last;
+  for(let i=0;i<3;i++){                                       // ลองใหม่เงียบๆ ก่อนแสดงข้อความ
+    try{const r=await api('/check',{lat,lng},15000);if(r.ok)return r;last=r.error;if(r.error==='BAD_POS')break}catch(e){last='NET'}
+    await new Promise(r=>setTimeout(r,1200*(i+1)));
+  }
+  throw new Error(last||'NET');
+}
+async function applyPin(pin){
+  const my=++pinSeq;
+  wz.pin=pin;wz.near=null;wz.locked=false;$('#toStep2').disabled=true;$('#toLog').classList.add('hidden');
+  $('#pinResult').innerHTML='<div class="res mid">กำลังตรวจระยะจาก L2…</div>';
+  let near;
+  try{ near=await checkDistance(pin.lat,pin.lng) }
+  catch(e){
+    if(my!==pinSeq)return;
+    $('#pinResult').innerHTML=`<div class="res mid"><div class="big">ยังตรวจระยะไม่ได้ในขณะนี้</div><div class="acts"><button class="btn" id="retryL2">ตรวจอีกครั้ง</button></div></div>`;
+    $('#retryL2').onclick=()=>applyPin(pin);return;
+  }
+  if(my!==pinSeq)return;
+  wz.near=near;
+  const ok=near.sellable;
+  const fb=near.basis==='straight_fallback'?'<div class="hint">ระยะเส้นตรง · ระยะตามถนนจะยาวกว่านี้</div>':'';
+  $('#pinResult').innerHTML=`<div class="res ${ok?'good':'bad'}">
+    <div class="big">${ok?'ขาย FWA ได้':'ใกล้ L2 · เสนอไฟเบอร์แทน'}</div>
+    <div>ห่างจาก L2 <b>${fmtNear(near)}</b> · เกณฑ์ ${CFG.FWA_MIN_DISTANCE_M} ม.</div>${fb}</div>`;
+  initMap1();
+  setTimeout(()=>{map1.invalidateSize();drawPin(map1,layer1,pin)},60);
+  $('#toStep2').disabled=!ok;
+  $('#toLog').classList.toggle('hidden',ok);
+}
+function goLL(){
+  const r=parseLL($('#ll').value);
+  if(!r){$('#llErr').textContent='อ่านพิกัดไม่ได้ วางเป็น Lat, Long ในประเทศไทย เช่น 16.4419, 102.8460';return}
+  $('#llErr').textContent='';
+  applyPin({lat:r.lat,lng:r.lng,source:'sgis',capturedAt:Date.now()});
+}
+$('#llGo').onclick=goLL;
+$('#ll').addEventListener('keydown',e=>{if(e.key==='Enter')goLL()});
+
+function linkBase(){return CFG.CUSTOMER_LINK_BASE||(/^https?:$/.test(location.protocol)?location.origin+location.pathname:'')}
+$('#lkMake').onclick=async()=>{
+  let r;try{r=await api('/link/new',{})}catch(e){r=null}
+  if(!r||!r.ok){toast('สร้างลิงก์ไม่สำเร็จ ลองอีกครั้ง');return}
+  const url=linkBase().replace(/\?.*$/,'')+'?pin='+r.token;
+  $('#lkUrl').value=url;
+  $('#lkLine').href='https://line.me/R/share?text='+encodeURIComponent('ทรู FWA: กรุณากดลิงก์นี้ขณะอยู่ที่บ้านที่จะติดตั้ง เพื่อยืนยันตำแหน่ง '+url);
+  $('#lkBox').classList.remove('hidden');$('#lkStatus').textContent='รอลูกค้ากดยืนยันตำแหน่ง…';
+  clearInterval(linkTimer);
+  linkTimer=setInterval(async()=>{
+    let s;try{s=await api('/link/status',{token:r.token})}catch(e){return}
+    if(!s||!s.ok)return;
+    if(s.status==='expired'){clearInterval(linkTimer);$('#lkStatus').textContent='ลิงก์หมดอายุ สร้างใหม่ได้'}
+    if(s.status==='done'){clearInterval(linkTimer);$('#lkStatus').textContent='ลูกค้าส่งตำแหน่งมาแล้ว';applyPin({lat:s.lat,lng:s.lng,accuracy:s.accuracy,source:'link',capturedAt:s.at})}
+  },3000);
+};
+$('#lkCopy').onclick=async()=>{try{await navigator.clipboard.writeText($('#lkUrl').value);toast('คัดลอกลิงก์แล้ว')}catch(e){$('#lkUrl').select();toast('กดคัดลอกจากช่องข้อความ')}};
+
+$('#atHome').onchange=e=>$('#gpsGo').disabled=!e.target.checked;
+$('#gpsGo').onclick=()=>{
+  if(!navigator.geolocation){$('#gpsInfo').textContent='อุปกรณ์นี้ไม่รองรับ GPS';return}
+  $('#gpsInfo').textContent='กำลังจับพิกัด รอสักครู่…';$('#gpsGo').disabled=true;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    $('#gpsGo').disabled=false;const c=pos.coords;
+    if(c.accuracy>CFG.GPS_MAX_ACCURACY_M){
+      $('#gpsInfo').innerHTML=`<span class="err">พิกัดยังไม่แม่นพอ (±${Math.round(c.accuracy)} ม. ต้องไม่เกิน ${CFG.GPS_MAX_ACCURACY_M} ม.) ออกที่โล่งแล้วกดใหม่</span>`;return}
+    $('#gpsInfo').textContent=`จับพิกัดสำเร็จ (±${Math.round(c.accuracy)} ม.)`;
+    applyPin({lat:c.latitude,lng:c.longitude,accuracy:c.accuracy,source:'gps',capturedAt:pos.timestamp});
+  },err=>{
+    $('#gpsGo').disabled=false;
+    $('#gpsInfo').innerHTML='<span class="err">'+({1:'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ Location ให้เบราว์เซอร์',2:'หาตำแหน่งไม่ได้ ลองออกที่โล่ง',3:'จับพิกัดไม่ทัน กดใหม่อีกครั้ง'}[err.code]||'จับพิกัดไม่ได้ ลองอีกครั้ง')+'</span>';
+  },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+};
+$('#toStep2').onclick=()=>gotoStep(2);
+$('#toLog').onclick=()=>{wz.locked=true;wz.speed={skipped:true};wz.outcome='not_closed';wz.reason='in_l2';gotoStep(3)};
+
+/* ================= STEP 2: SPEEDTEST ================= */
+const mbps=(bytes,ms)=>bytes*8/(ms*1000);
+const fmtN=v=>v==null||isNaN(v)?'–':(v>=100?String(Math.round(v)):v.toFixed(1));
+function spRate(S,total){          // ตัดช่วงเริ่มต้น (TCP ramp-up) ออก 20% แรกของข้อมูล
+  const end=S[S.length-1];let k=S.findIndex(x=>x[1]>=total*0.2);if(k<0)k=0;
+  const dt=end[0]-S[k][0];
+  return (dt<200||S.length<5)?mbps(total,end[0]):mbps(end[1]-S[k][1],dt);
+}
+async function spPing(base,sig,n,ui){
+  const v=[],t00=performance.now();
+  for(let i=0;i<n;i++){
+    if(sig.aborted)throw new Error('abort');
+    if(i>=4&&performance.now()-t00>4000)break;             // เครือข่ายช้ามาก ไม่รอนาน
+    const t0=performance.now();
+    try{const r=await fetchT(`${base}/ping?_=${Date.now()}_${i}`,{cache:'no-store'},2500,sig);if(!r.ok)throw 0;v.push(performance.now()-t0)}
+    catch(e){if(sig.aborted)throw new Error('abort')}
+    if(v.length>1)ui.set({ping:Math.round([...v.slice(1)].sort((a,b)=>a-b)[Math.floor((v.length-1)/2)]),big:null});
+  }
+  const u=v.slice(1);                                       // ครั้งแรกรวมเวลาเชื่อมต่อ TLS ตัดทิ้ง
+  if(u.length<2)throw new Error('NET');
+  const med=[...u].sort((a,b)=>a-b)[Math.floor(u.length/2)];
+  let j=0;for(let i=1;i<u.length;i++)j+=Math.abs(u[i]-u[i-1]);
+  return {ping:Math.round(med),jitter:Math.round(j/(u.length-1))};
+}
+async function spDown(base,tk,caps,sig,ui){
+  const ctl=new AbortController(),link=()=>ctl.abort();sig.addEventListener('abort',link);
+  const S=[];let total=0;const t0=performance.now();
+  const timer=setTimeout(()=>ctl.abort(),CFG.SPEED_DOWN_MS);
+  let pt=0,pb=0,ema=0;
+  const iv=setInterval(()=>{const t=performance.now()-t0,r=mbps(total-pb,t-pt);pt=t;pb=total;ema=ema?ema*.5+r*.5:r;ui.set({down:ema,big:ema})},250);
+  const worker=async()=>{
+    while(!ctl.signal.aborted){
+      let r;try{r=await fetch(`${base}/down?token=${encodeURIComponent(tk)}&bytes=${caps.downChunk}&_=${Math.random()}`,{cache:'no-store',signal:ctl.signal})}catch(e){return}
+      if(!r.ok)return;                                      // 429 = ถึงเพดานต่อครั้งแล้ว
+      const rd=r.body.getReader();
+      try{for(;;){const x=await rd.read();if(x.done)break;total+=x.value.length;S.push([performance.now()-t0,total])}}catch(e){return}
+    }
+  };
+  await Promise.all(Array.from({length:CFG.SPEED_DOWN_STREAMS},worker));
+  clearTimeout(timer);clearInterval(iv);sig.removeEventListener('abort',link);
+  if(sig.aborted)throw new Error('abort');
+  if(!total)throw new Error('NET');
+  return spRate(S,total);
+}
+function spBlob(size){const u=new Uint8Array(size);for(let o=0;o<size;o+=65536)crypto.getRandomValues(u.subarray(o,Math.min(o+65536,size)));return new Blob([u],{type:'text/plain'})}
+async function spUp(base,tk,caps,sig,ui){
+  const size=Math.min(caps.upChunk,512*1024),blob=spBlob(size);
+  const ctl=new AbortController(),link=()=>ctl.abort();sig.addEventListener('abort',link);
+  const S=[];let done=0;const t0=performance.now();
+  const timer=setTimeout(()=>ctl.abort(),CFG.SPEED_UP_MS);
+  const worker=async()=>{
+    while(!ctl.signal.aborted){
+      try{
+        const r=await fetch(`${base}/up?token=${encodeURIComponent(tk)}`,{method:'POST',body:blob,headers:{'Content-Type':'text/plain'},cache:'no-store',signal:ctl.signal});
+        if(!r.ok)return;await r.json();
+      }catch(e){return}
+      done+=size;const t=performance.now()-t0;S.push([t,done]);const v=mbps(done,t);ui.set({up:v,big:v});
+    }
+  };
+  await Promise.all(Array.from({length:CFG.SPEED_UP_STREAMS},worker));
+  clearTimeout(timer);sig.removeEventListener('abort',link);
+  if(sig.aborted)throw new Error('abort');
+  return S.length?spRate(S,done):null;                      // อัปโหลดล้มเหลวไม่ทำให้ทั้งการทดสอบล้ม
+}
+async function speedRun(sig,ui){
+  const base=CFG.SPEEDTEST_API_URL.replace(/\/+$/,'');
+  ui.phase('เชื่อมต่อเซิร์ฟเวอร์…',3,300);
+  let d;
+  try{const r=await fetchT(`${base}/start?sale=${encodeURIComponent(me().c)}`,{cache:'no-store'},6000,sig);d=await r.json()}
+  catch(e){if(sig.aborted)throw new Error('abort');throw new Error('NET')}
+  if(!d.ok)throw new Error(d.error||'NET');
+  ui.phase('วัด Ping…',15,2000);
+  const p=await spPing(base,sig,CFG.SPEED_PINGS,ui);ui.set({ping:p.ping});
+  ui.phase('ดาวน์โหลด…',65,CFG.SPEED_DOWN_MS);
+  const down=await spDown(base,d.token,d.caps,sig,ui);ui.set({down,big:down});
+  ui.phase('อัปโหลด…',98,CFG.SPEED_UP_MS);
+  const up=await spUp(base,d.token,d.caps,sig,ui);ui.set({up,big:down});
+  return {down:+down.toFixed(1),up:up==null?null:+up.toFixed(1),ping:p.ping,jitter:p.jitter};
+}
+
+const SP={running:false,ctl:null};
+function spTiles(d,u,p){$('#tDown').textContent=fmtN(d);$('#tUp').textContent=fmtN(u);$('#tPing').textContent=p==null?'–':Math.round(p)}
+function spBig(v){$('#spBig').textContent=fmtN(v)}
+function spBar(pct,ms){const b=$('#spBar');b.style.transitionDuration=(ms||0)+'ms';b.style.width=pct+'%'}
+const spMethodLabel = m => ({auto:'วัดในแอป',manual:'กรอกเอง'}[m]||'');
+function showSpResult(s){
+  if(s&&!s.skipped&&s.down!=null){
+    spTiles(s.down,s.up,s.ping);spBig(s.down);spBar(100,0);
+    $('#spPhase').textContent='ผลล่าสุด'+(s.method?' · '+spMethodLabel(s.method):'');
+  }else{spTiles();spBig();spBar(0,0);$('#spPhase').textContent='พร้อมทดสอบ'}
+}
+function fillSpeed(){
+  const s=wz.speed||{};
+  $('#spDown').value=s.down??'';$('#spUp').value=s.up??'';$('#spPing').value=s.ping??'';
+  $('#spManual').open=s.method==='manual';$('#eSp').textContent='';
+  showSpResult(s);showGrade();
+}
+function showGrade(){
+  const d=parseFloat($('#spDown').value);
+  $('#spGrade').innerHTML=isNaN(d)?'':`ผลประเมิน: ${gradeChip(d)}`;
+}
+['spDown','spUp','spPing'].forEach(id=>$('#'+id).addEventListener('input',()=>{
+  const s=wz.speed;if(s&&s.method==='auto'){s.method='manual';delete s.jitter}   // แก้ตัวเลขเองแล้ว = ไม่ใช่ผลจากตัววัด
+  showGrade();
+}));
+$('#spCancel').onclick=()=>{if(SP.ctl)SP.ctl.abort()};
+$('#spStart').onclick=async()=>{
+  if(SP.running)return;
+  SP.running=true;const ctl=new AbortController();SP.ctl=ctl;
+  $('#spStart').disabled=true;$('#spCancel').classList.remove('hidden');$('#eSp').textContent='';
+  spTiles();spBig();spBar(0,0);
+  const cur={down:null,up:null,ping:null};
+  const ui={
+    phase:(t,pct,ms)=>{$('#spPhase').textContent=t;spBar(pct,ms)},
+    set:o=>{Object.assign(cur,o);spTiles(cur.down,cur.up,cur.ping);if(o.big!=null)spBig(o.big)}
+  };
+  try{
+    const r=await speedRun(ctl.signal,ui);
+    wz.speed={method:'auto',skipped:false,down:r.down,up:r.up,ping:r.ping,jitter:r.jitter,at:Date.now()};
+    $('#spDown').value=r.down;$('#spUp').value=r.up??'';$('#spPing').value=r.ping;
+    showSpResult(wz.speed);showGrade();
+  }catch(e){
+    spBar(0,0);spTiles();spBig();
+    if(ctl.signal.aborted){$('#spPhase').textContent='ยกเลิกแล้ว'}
+    else{
+      const c=e&&e.message;
+      $('#spPhase').textContent='ยังวัดไม่ได้';
+      $('#eSp').textContent=c==='RATE'?'วันนี้วัดครบจำนวนครั้งแล้ว กรอกผลเองได้'
+        :c==='DISABLED'||c==='DAILY_CAP'?'ตอนนี้วัดในแอปไม่ได้ กรอกผลเองได้'
+        :'สัญญาณไม่นิ่ง กดวัดใหม่ หรือกรอกผลเอง';
+      $('#spManual').open=true;
+    }
+  }finally{SP.running=false;SP.ctl=null;$('#spStart').disabled=false;$('#spStart').textContent='วัดใหม่';$('#spCancel').classList.add('hidden')}
+};
+$('#backTo1').onclick=()=>gotoStep(1);
+$('#toStep3').onclick=()=>{
+  if(SP.running){$('#eSp').textContent='รอให้วัดเสร็จ หรือกดยกเลิก';return}
+  const down=parseFloat($('#spDown').value);
+  if(isNaN(down)||down<0){$('#eSp').textContent='กดเริ่มทดสอบ หรือกรอกผลเอง';return}
+  const m0=wz.speed.method,u=parseFloat($('#spUp').value),p=parseFloat($('#spPing').value);
+  wz.speed={...wz.speed,skipped:false,method:m0==='auto'?'auto':'manual',down,up:isNaN(u)?null:u,ping:isNaN(p)?null:p,at:Date.now()};
+  gotoStep(3);
+};
+
+/* ================= STEP 3: OUTCOME ================= */
+function speedBad(){return !wz.speed.skipped&&wz.speed.down!=null&&wz.speed.down<CFG.SPEED_MIN}
+const fmtSpeed = s => `↓${s.down??'-'} ↑${s.up??'-'} Mbps${s.ping!=null?' · ping '+s.ping+' ms':''}`;
+function fillStep3(){
+  const n=wz.near,s=wz.speed;
+  $('#s3Sum').innerHTML=`ห่างจาก L2 ${fmtNear(n)}${s.skipped?'':' · '+fmtSpeed(s)+' '+gradeChip(s.down)}`;
+  $('#nReasons').innerHTML=REASONS.map(r=>`<label class="opt" data-k="${r[0]}"><input type="radio" name="nr" value="${r[0]}"><span><b>${r[1]}</b></span></label>`).join('');
+  document.querySelectorAll('input[name=nr]').forEach(r=>{r.checked=r.value===wz.reason;r.disabled=wz.locked&&r.value!=='in_l2';r.onchange=syncS3;r.closest('.opt').classList.toggle('dis',r.disabled)});
+  document.querySelectorAll('input[name=oc]').forEach(r=>{r.checked=r.value===wz.outcome;r.disabled=wz.locked&&r.value!=='not_closed'});
+  ['optClosed','optDeciding'].forEach(id=>$('#'+id).classList.toggle('dis',wz.locked));
+  $('#s3Lock').classList.toggle('hidden',!wz.locked);
+  $('#nNote').value=wz.note||'';$('#dNote').value=wz.note||'';$('#dPhone').value=wz.phone||'';$('#dDate').value=wz.follow||'';
+  $('#dDate').min=today();
+  $('#speedAck').checked=!!wz.speedAck;$('#eS3').textContent='';syncS3();
+}
+const curOc=()=>{const r=document.querySelector('input[name=oc]:checked');return r?r.value:null};
+const curReason=()=>{const r=document.querySelector('input[name=nr]:checked');return r?r.value:null};
+function syncS3(){
+  const oc=curOc();
+  $('#ocDeciding').classList.toggle('hidden',oc!=='deciding');
+  $('#ocNot').classList.toggle('hidden',oc!=='not_closed');
+  $('#nOtherWrap').classList.toggle('hidden',!(oc==='not_closed'&&curReason()==='other'));
+  $('#speedWarn').classList.toggle('hidden',!(oc==='closed'&&speedBad()));
+  $('#s3Next').textContent=oc==='closed'?'ถัดไป':'บันทึก';
+}
+document.querySelectorAll('input[name=oc]').forEach(r=>r.onchange=syncS3);
+$('#backFrom3').onclick=()=>gotoStep(wz.locked?1:2);
+$('#s3Next').onclick=async()=>{
+  const oc=curOc(),err=m=>{$('#eS3').textContent=m};
+  if(!oc)return err('เลือกผลการเสนอขาย');
+  wz.outcome=oc;wz.speedAck=$('#speedAck').checked;
+  if(oc==='closed'){
+    if(speedBad()&&!wz.speedAck)return err('สัญญาณต่ำกว่าเกณฑ์ ต้องยืนยันว่าแจ้งลูกค้าแล้ว');
+    wz.reason=null;wz.note='';$('#eS3').textContent='';return gotoStep(4);
+  }
+  if(oc==='deciding'){
+    const ph=$('#dPhone').value.trim();if(!phoneOk(ph))return err('กรอกเบอร์ลูกค้าให้ถูกต้อง (ขึ้นต้น 0 และมี 9-10 หลัก)');
+    wz.phone=ph;wz.follow=$('#dDate').value;wz.note=$('#dNote').value.trim();wz.reason='deciding';
+  }else{
+    const rs=curReason();if(!rs)return err('เลือกสาเหตุที่ปิดไม่ได้');
+    const nt=$('#nNote').value.trim();if(rs==='other'&&nt.length<3)return err('ระบุสาเหตุ');
+    wz.reason=rs;wz.note=rs==='other'?nt:'';wz.phone='';wz.follow='';
+  }
+  await submitCase();
+};
+function outcomeLabel(r){
+  if(r.outcome==='closed')return 'ปิดการขายได้';
+  if(r.outcome==='deciding')return 'รอตัดสินใจ';
+  return 'ปิดไม่ได้: '+reasonLabel(r.reason)+(r.reason==='other'&&r.note?' ('+r.note+')':'');
+}
+
+/* ================= STEP 4: ปิดการขาย ================= */
+function fillForm(){
+  const f=wz.form||{};
+  $('#fName').value=f.name||'';$('#fDate').value=f.date||'';$('#fDate').min=today();
+  $('#fPromos').innerHTML=PROMOS.map(p=>`<label class="opt"><input type="radio" name="fp" value="${p[0]}" ${f.promo===p[0]?'checked':''}><span><b>${p[1]}</b></span></label>`).join('');
+  const p=wz.pin;$('#s4Pin').textContent=p?`ห่างจาก L2 ${fmtNear(wz.near)}`:'';
+  document.querySelectorAll('#step4 .err').forEach(e=>e.textContent='');
+}
+$('#backTo3').onclick=()=>gotoStep(3);
+function readForm(){const p=document.querySelector('input[name=fp]:checked');return {name:$('#fName').value.trim(),promo:p?p.value:'',date:$('#fDate').value}}
+function validate(f){
+  const set=(id,m)=>{$('#'+id).textContent=m||'';return !m};let ok=true;
+  ok&=set('eName',f.name.length<3?'กรอกชื่อลูกค้า':'');
+  ok&=set('ePromo',!f.promo?'เลือกโปรโมชัน':'');
+  ok&=set('eDate',!f.date?'เลือกวันนัดติดตั้ง':'');
+  return !!ok;
+}
+$('#submitReq').onclick=async()=>{
+  const f=readForm();wz.form=f;if(!validate(f))return;
+  wz.outcome='closed';await submitCase();
+};
+
+/* ================= บันทึกเคส (ส่งซ้ำอัตโนมัติถ้าเครือข่ายหลุด) ================= */
+function viewOf(body,near){      // รูปแบบเดียวกับที่ /mine ส่งกลับ ใช้แสดงในรายการระหว่างรอส่ง
+  return {id:body.id,status:'sending',outcome:body.outcome,reason:body.reason,note:body.note,followPhone:body.phone,followDate:body.follow,
+    form:body.outcome==='closed'?body.form:null,speed:body.speed,speedAck:body.speedAck,pin:body.pin,near:{dist:near.dist,straight:near.straight,road:near.road,basis:near.basis,beyond:!!near.beyond},
+    createdAt:body.createdAt,updatedAt:Date.now(),history:[{at:Date.now(),by:'คุณ',action:'บันทึก'}]};
+}
+async function submitCase(){
+  const w=wz;if(!w.id)w.id=newId();
+  const body={id:w.id,ref:w.near.ref,createdAt:w.createdAt||(w.createdAt=Date.now()),pin:{lat:w.pin.lat,lng:w.pin.lng,source:w.pin.source,accuracy:w.pin.accuracy??null,capturedAt:w.pin.capturedAt||null},
+    speed:w.speed.skipped?{skipped:true}:{down:w.speed.down,up:w.speed.up,ping:w.speed.ping,jitter:w.speed.jitter,method:w.speed.method},
+    speedAck:w.speedAck,outcome:w.outcome,reason:w.reason,note:w.note,phone:w.phone,follow:w.follow,form:w.outcome==='closed'?w.form:undefined};
+  $('#s3Next').disabled=true;$('#submitReq').disabled=true;
+  const p=queue({k:'save',id:w.id,body,view:viewOf(body,w.near)});
+  await Promise.race([p,new Promise(r=>setTimeout(r,6000))]);
+  $('#s3Next').disabled=false;$('#submitReq').disabled=false;
+  const pending=Q.get().some(x=>x.id===w.id);
+  const closed=w.outcome==='closed';
+  $('#doneTitle').textContent=closed?'บันทึกการขายแล้ว':'บันทึก Call Card แล้ว';
+  $('#doneTxt').textContent=`เลขที่ ${w.id} — ${outcomeLabel({outcome:w.outcome,reason:w.reason,note:w.note})}`+(closed?' · ออกออเดอร์สำเร็จแล้วกลับมาใส่ Circuit ที่ "รายการของฉัน"':'')+(w.outcome==='deciding'?' · โทรติดตามที่ '+w.phone:'')+(pending?' · ระบบกำลังส่งข้อมูลให้อัตโนมัติ':'');
+  gotoStep(5);
+}
+$('#goList').onclick=()=>showView('list');
+$('#newAgain').onclick=()=>resetWizard();
+function resetWizard(){
+  wz=newWz();clearInterval(linkTimer);pinSeq++;
+  $('#pinResult').innerHTML='';$('#toStep2').disabled=true;$('#toLog').classList.add('hidden');
+  $('#ll').value='';$('#lkBox').classList.add('hidden');$('#atHome').checked=false;$('#gpsGo').disabled=true;$('#gpsInfo').textContent='';
+  $('#spStart').textContent='เริ่มทดสอบ';
+  if(layer1)layer1.clearLayers();
+  gotoStep(1);showView('new');
+}
+
+/* ================= LIST ================= */
+let mineItems=store.get('fwa_mine',[]);
+function allItems(){
+  const q=Q.get(),ids=new Set(q.filter(x=>x.k==='save').map(x=>x.id));
+  const out=q.filter(x=>x.k==='save').map(x=>x.view);
+  for(const r of mineItems){if(!ids.has(r.id))out.push({...r})}
+  for(const x of q.filter(y=>y.k==='circuit')){const r=out.find(o=>o.id===x.body.id);if(r){r.circuit=x.body.circuit.toUpperCase();r.status='completed'}}
+  return out.sort((a,b)=>b.updatedAt-a.updatedAt);
+}
+const titleOf = r => r.form&&r.form.name ? r.form.name : (r.followPhone?'โทรติดตาม '+r.followPhone:'Call Card (ไม่ปิดการขาย)');
+async function loadMine(){
+  if(!CFG.API_URL)return;
+  try{const r=await api('/mine',{});if(r.ok){mineItems=r.items;store.set('fwa_mine',mineItems)}}catch(e){}
+}
+function renderList(){
+  const fl=[['all','ทั้งหมด'],['waiting_circuit','รอ Circuit'],['completed','ครบแล้ว'],['logged','ไม่ปิดการขาย']];
+  $('#filters').innerHTML=fl.map(([k,l])=>`<button class="fl" data-k="${k}" aria-pressed="${k===listFilter}">${l}</button>`).join('');
+  $('#filters').querySelectorAll('.fl').forEach(b=>b.onclick=()=>{listFilter=b.dataset.k;renderList()});
+  const paint=()=>{
+    let rs=allItems();if(listFilter!=='all')rs=rs.filter(r=>r.status===listFilter||(r.status==='sending'&&((listFilter==='waiting_circuit'&&r.outcome==='closed')||(listFilter==='logged'&&r.outcome!=='closed'))));
+    $('#lst').innerHTML=rs.length?rs.map(r=>`<button class="it" data-id="${esc(r.id)}"><div class="t"><b>${esc(titleOf(r))}</b><span class="chip ${STATUS_CLS[r.status]||''}">${STATUS[r.status]||''}</span></div>
+      <div class="s">${esc(r.id)} · ห่าง L2 ${fmtNear(r.near)}${r.speed&&!r.speed.skipped&&r.speed.down!=null?' · ↓'+r.speed.down+' Mbps':''} · ${fmtDT(r.updatedAt)}</div>
+      <div class="s">${r.outcome==='closed'?esc(promoLabel(r.form&&r.form.promo))+' · นัดติดตั้ง '+fmtD(r.form&&r.form.date)+(r.circuit?' · Circuit '+esc(r.circuit):''):esc(outcomeLabel(r))}</div></button>`).join(''):
+      `<div class="bx pad"><p class="sub" style="margin:0">ยังไม่มีรายการ</p></div>`;
+    $('#lst').querySelectorAll('.it').forEach(b=>b.onclick=()=>openDetail(b.dataset.id));
+  };
+  paint();loadMine().then(paint);
+}
+
+/* ================= DETAIL ================= */
+function openDetail(id){
+  const r=allItems().find(x=>x.id===id);if(!r)return;
+  const closed=r.outcome==='closed',sp=r.speed||{};
+  $('#dTitle').textContent=r.id;
+  $('#dBody').innerHTML=`
+   <div class="res ${r.near&&r.near.dist>CFG.FWA_MIN_DISTANCE_M?'good':'bad'}"><div class="big">ห่างจาก L2 ${fmtNear(r.near)}</div>
+     <div class="hint">${r.near&&r.near.basis==='road'?'วัดตามถนน':'เส้นตรง'} · เกณฑ์ ${CFG.FWA_MIN_DISTANCE_M} ม.</div></div>
+   <div id="map2" class="map" style="margin-top:12px"></div>
+   <dl class="kv" style="margin-top:14px">
+     <dt>ผลการเสนอขาย</dt><dd><b>${esc(outcomeLabel(r))}</b></dd>
+     ${r.followPhone?`<dt>เบอร์ติดตาม</dt><dd>${esc(r.followPhone)}${r.followDate?' · ติดตามวันที่ '+fmtD(r.followDate):''}${r.note?' · '+esc(r.note):''}</dd>`:''}
+     <dt>Speedtest</dt><dd>${sp.skipped||sp.down==null?'-':esc(fmtSpeed(sp))+' '+gradeChip(sp.down)}${r.speedAck?' <span class="chip" style="background:#fff1cc;color:#8a5a00">ลูกค้ารับทราบสัญญาณต่ำ</span>':''}</dd>
+     ${closed?`<dt>ชื่อลูกค้า</dt><dd>${esc(r.form.name)}</dd>
+     <dt>โปรโมชัน</dt><dd>${esc(promoLabel(r.form.promo))}</dd>
+     <dt>วันนัดติดตั้ง</dt><dd>${fmtD(r.form.date)}</dd>
+     <dt>Circuit</dt><dd>${r.circuit?'<b>'+esc(r.circuit)+'</b>':'-'}</dd>`:''}
+   </dl>
+   ${closed&&r.status==='waiting_circuit'?`<div class="circ"><label for="cirIn" style="margin-top:0">Circuit (หลังออกออเดอร์สำเร็จ)</label><input type="text" id="cirIn" autocapitalize="characters" autocomplete="off" maxlength="30"><div class="err" id="eCir"></div><div class="acts"><button class="btn red" id="cirSave">บันทึก Circuit</button></div></div>`:''}
+   ${closed&&r.status==='sending'?'<div class="hint" style="margin-top:12px">กำลังส่งข้อมูล ใส่ Circuit ได้หลังส่งเสร็จ</div>':''}
+   <div style="margin-top:14px"><b>ประวัติ</b><ul class="hist">${(r.history||[]).map(h=>`<li>${fmtDT(h.at)} · ${esc(h.by)} · ${esc(h.action)}</li>`).join('')}</ul></div>`;
+  $('#dlg').showModal();
+  setTimeout(()=>{ if(map2){map2.remove();map2=null}
+    map2=makeMap('map2');const g=L.layerGroup().addTo(map2);if(r.pin)drawPin(map2,g,r.pin);map2.invalidateSize()},80);
+  if($('#cirSave'))$('#cirSave').onclick=async()=>{
+    const v=$('#cirIn').value.trim().toUpperCase();
+    if(!/^[A-Z0-9\-_/]{4,30}$/.test(v)){$('#eCir').textContent='Circuit ไม่ถูกต้อง (ตัวอักษร/ตัวเลข 4-30 ตัว)';return}
+    $('#cirSave').disabled=true;
+    await Promise.race([queue({k:'circuit',body:{id:r.id,circuit:v}}),new Promise(x=>setTimeout(x,5000))]);
+    await loadMine();$('#dlg').close();toast('บันทึก Circuit แล้ว');renderList();
+  };
+}
+$('#dClose').onclick=()=>$('#dlg').close();
+
+/* ================= CUSTOMER MODE ================= */
+(function(){
+  const token=new URLSearchParams(location.search).get('pin');
+  if(!token){init();return}
+  $('#app').classList.add('hidden');$('#customer').classList.remove('hidden');
+  let got=null;
+  $('#cGet').onclick=()=>{
+    $('#cInfo').textContent='กำลังหาตำแหน่ง…';
+    navigator.geolocation.getCurrentPosition(p=>{
+      got={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy};
+      $('#cInfo').textContent=`ได้ตำแหน่งแล้ว (±${Math.round(got.accuracy)} ม.) กด "ส่งตำแหน่ง" ได้เลย`;$('#cSend').disabled=false;
+    },e=>{$('#cInfo').innerHTML='<span class="err">'+(e.code===1?'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ Location แล้วลองใหม่':'หาตำแหน่งไม่ได้ ลองออกที่โล่งแล้วกดใหม่')+'</span>'},{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+  };
+  $('#cSend').onclick=async()=>{
+    $('#cSend').disabled=true;
+    try{
+      const r=await (await fetchT(CFG.API_URL.replace(/\/+$/,'')+'/link/submit',{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token,...got})},12000)).json();
+      if(r.ok)$('#cInfo').innerHTML='<b style="color:#16803c">ส่งตำแหน่งให้พนักงานเรียบร้อย ขอบคุณค่ะ/ครับ</b>';
+      else{$('#cInfo').innerHTML='<span class="err">ลิงก์หมดอายุ ขอลิงก์ใหม่จากพนักงาน</span>'}
+    }catch(e){$('#cInfo').innerHTML='<span class="err">ส่งไม่สำเร็จ ลองกดส่งอีกครั้ง</span>';$('#cSend').disabled=false}
+  };
+})();
+
+function init(){
+  document.querySelectorAll('.thr').forEach(e=>e.textContent=CFG.FWA_MIN_DISTANCE_M);
+  renderTabs();
+  let tries=0;
+  (function ready(){                                          // Portal ฝังตัวตนให้หลังโหลด รอได้ไม่เกิน ~3 วินาที
+    if(me().c&&me().t){
+      if(!linkBase())$('#lkWrap').classList.add('hidden');
+      showView('new');gotoStep(1);syncTag();flushQ();
+      setInterval(flushQ,30000);window.addEventListener('online',flushQ);
+    }else if(++tries<12)setTimeout(ready,250);
+    else{$('#viewNew').classList.add('hidden');$('#tabs').classList.add('hidden');$('#noId').classList.remove('hidden')}
+  })();
+}
+</script>
+</body>
+</html>
